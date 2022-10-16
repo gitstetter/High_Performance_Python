@@ -1,26 +1,16 @@
 """Julia set generator without optional PIL-based image drawing"""
 import time
-from typing import Callable
-from plotting import show_false_greyscale, show_greyscale
-from functools import wraps
 
-def timefn(fn: Callable):
-    """Decorator for timing code execution of a function"""
-    @wraps(fn) # expose funtion name and docstring to be displayable
-    def measure_time(*args, **kwargs):
-        t1 = time.time()
-        result = fn(*args, **kwargs)
-        t2 =time.time()
-        print(f"@timefn: {fn.__name__} took {t2 -t1} seconds")
-        return result
-    return measure_time
-
+#no op profiler
+if 'line_profiler' not in dir() and 'profile' not in dir():
+    def profile(func):
+        return func 
 
 # area of complex space to investigate
 x1, x2, y1, y2 = -1.8, 1.8, -1.8, 1.8
 c_real, c_imag = -0.62772, -.42193
 
-
+@profile
 def calculate_z_serial_purepython(maxiter, zs, cs):
     """Calculate output list using Julia update rule"""
     output = [0] * len(zs)
@@ -34,7 +24,8 @@ def calculate_z_serial_purepython(maxiter, zs, cs):
         output[i] = n
     return output
 
-@timefn
+
+@profile
 def calc_pure_python(draw_output, desired_width, max_iterations):
     """Create a list of complex co-ordinates (zs) and complex parameters (cs), build Julia set and display"""
     x_step = (x2 - x1) / desired_width
@@ -51,8 +42,6 @@ def calc_pure_python(draw_output, desired_width, max_iterations):
         xcoord += x_step
     # set width and height to the generated pixel counts, rather than the
     # pre-rounding desired width and height
-    width = len(x)
-    height = len(y)
     # build a list of co-ordinates and the initial condition for each cell.
     # Note that our initial condition is a constant and could easily be removed,
     # we use it to simulate a real-world scenario with several inputs to our function
@@ -65,20 +54,17 @@ def calc_pure_python(draw_output, desired_width, max_iterations):
 
     print("Length of x:", len(x))
     print("Total elements:", len(zs))
+    start_time = time.time()
     output = calculate_z_serial_purepython(max_iterations, zs, cs)
-    
+    end_time = time.time()
+    secs = end_time - start_time
+    print(calculate_z_serial_purepython.__name__ + " took", secs, "seconds")
 
-    #assert sum(output) == 33219980  # this sum is expected for 1000^2 grid with 300 iterations
-
-    if draw_output:
-        show_false_greyscale(output, width, height, max_iterations)
-        #show_greyscale(output, width, height, max_iterations)
+    assert sum(output) == 33219980  # this sum is expected for 1000^2 grid with 300 iterations
 
 
-if __name__ == "__main__":
-    # Calculate the Julia set using a pure Python solution with
-    # reasonable defaults for a laptop
-    # set draw_output to True to use PIL to draw an image
-    calc_pure_python(draw_output=False, desired_width=1000, max_iterations=300)
-    
+# Calculate the Julia set using a pure Python solution with
+# reasonable defaults for a laptop
+# set draw_output to True to use PIL to draw an image
+calc_pure_python(draw_output=False, desired_width=1000, max_iterations=300)
 
